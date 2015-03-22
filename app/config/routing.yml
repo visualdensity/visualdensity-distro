@@ -1,3 +1,8 @@
+distro_links_manager:
+    resource: "@DistroLinksManagerBundle/Controller/"
+    type:     annotation
+    prefix:   /
+
 distro_core:
     resource: "@DistroCoreBundle/Controller/"
     type:     annotation
