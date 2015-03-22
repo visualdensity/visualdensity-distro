@@ -133,6 +133,7 @@ class LinksController extends Controller
                 'category'    => $request->request->get('category'),
                 'description' => $request->request->get('description'),
                 'publish'     => new \MongoDate(strtotime($request->request->get('publish') . ' 03:00:00')),
+                'created'     => new \MongoDate(),
             );
         }
 
@@ -151,6 +152,6 @@ class LinksController extends Controller
         }
 
         return $response;
-    } 
+    }//createAction 
 
 }//LinksController
