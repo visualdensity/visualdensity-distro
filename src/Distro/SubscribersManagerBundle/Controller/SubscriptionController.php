@@ -56,19 +56,20 @@ class SubscriptionController extends Controller
                 'name'         => $request->request->get('name'),
                 'email'        => $request->request->get('email'),
                 'subscription' => $request->request->get('subscription'),
-                'status'       => $request->request->get('status'),
+                'status'       => 'active',
                 'created'      => new \MongoDate(),
             );
         }
 
         $m = new \MongoClient(); // connect
-        $col = $m->selectCollection("distro-2015","users");
+        $col = $m->selectCollection("distro-2015","subscribers");
         
         if( !$col->insert($data) ) {
             $self_link = $this->generateUrl('subscribe_create');
             $hal = new Hal($self_link, array('error' => 'Could not save record'));
 
             $response = new Response();
+            $response->setStatusCode(422);
             $response->headers->set('Content-Type', 'application/hal+json');
             $response->setContent( $hal->asJson() );
         } else {
@@ -87,7 +88,7 @@ class SubscriptionController extends Controller
     public function viewAction($id)
     {
         $m = new \MongoClient(); // connect
-        $col = $m->selectCollection("distro-2015","users");
+        $col = $m->selectCollection("distro-2015","subscribers");
         $subscriber = $col->findOne(array('_id' => new \MongoId($id)));
 
         $response = new Response();
