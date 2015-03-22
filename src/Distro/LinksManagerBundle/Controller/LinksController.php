@@ -21,11 +21,11 @@ class LinksController extends Controller
 {
 
     /**
-     * @Route("/today/{category}", name="link_today" )
+     * @Route("/today/{category}/{limit}", name="link_today", defaults={"limit":"5"} )
      * @Method("GET")
      * @Template()
      */
-    public function listAction($category)
+    public function listAction($category, $limit)
     {
 
         $data = null;
@@ -39,7 +39,7 @@ class LinksController extends Controller
         $links = $col->find(array(
             'category' => $category,
             'publish'  => array('$gt' => $start_date, '$lte' => $end_date)
-        ));
+        ))->limit($limit);
 
         $hal = new Hal($this->generateUrl('link_today', array('category' => $category)));
         foreach($links as $id => $l ) {
