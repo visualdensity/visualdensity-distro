@@ -19,6 +19,54 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
  */
 class LinksController extends Controller
 {
+
+    /**
+     * @Route("/today/{category}", name="link_today" )
+     * @Method("GET")
+     * @Template()
+     */
+    public function listAction($category)
+    {
+
+        $data = null;
+
+        $start_date = new \MongoDate(strtotime(date('j F Y 00:00:00')));
+        $end_date   = new \MongoDate(strtotime(date('j F Y 23:59:59')));
+
+        $m = new \MongoClient(); // connect
+        $col = $m->selectCollection("distro-2015","links");
+
+        $links = $col->find(array(
+            'category' => $category,
+            'publish'  => array('$gt' => $start_date, '$lte' => $end_date)
+        ));
+
+        $hal = new Hal($this->generateUrl('link_today', array('category' => $category)));
+        foreach($links as $id => $l ) {
+            $data = array(
+                'id'          => (string) $l['_id'],
+                'title'       => $l['title'],
+                'destination' => $l['destination'],
+                'description' => $l['description'],
+                'category'    => $l['category'],
+                'publish'     => date('Y-M-d', $l['publish']->sec),
+            );
+
+            $self_link = $this->generateUrl('link_view', array('id' => $data['id']) );
+            $resource = new Hal($self_link, $data);
+            $hal->addResource(
+                'link',
+                $resource 
+            );
+        }
+
+        $response = new Response();
+        $response->headers->set('Content-Type', 'application/hal+json');
+        $response->setContent( $hal->asJson() );
+
+        return $response;
+    }//listAction
+
     /**
      * @Route("/{id}", name="link_view")
      * @Method("GET")
@@ -41,47 +89,10 @@ class LinksController extends Controller
         $response = new Response();
         $response->headers->set('Content-Type', 'application/hal+json');
         $response->setContent( $hal->asJson() );
-        return $response;
-
-        print '<pre>'; print_r($data); die;
-
-    }
-
-
-    /**
-     * @Route("/", name="link_list" )
-     * @Method("GET")
-     * @Template()
-     */
-    public function listAction(Request $request)
-    {
-        //Mongodb List all
-
-        $hal = new Hal($this->generateUrl('link_list'));
-
-        //foreach($templates as $t) {
-        //    $data = array(
-        //        'id'          => $t->getId(),
-        //        'title'       => $t->getTitle(),
-        //        'description' => $t->getDescription(),
-        //        'sructure'    => $t->getStructure(),
-        //        'owner'       => $t->getOwner()
-        //    );
-        //    $resource_link   = $this->generateUrl('link_view', array('id' => $t->getId()) );
-        //    $resource = new Hal($resource_link, $data);
-        //    $resource->addLink( 'create', $this->generateUrl('link_create') );
-        //    $hal->addResource(
-        //        'template',
-        //        $resource 
-        //    );
-        //}
-
-        $response = new Response();
-        $response->headers->set('Content-Type', 'application/hal+json');
-        $response->setContent( $hal->asJson() );
 
         return $response;
-    }
+
+    }//viewAction
 
 
     /**
@@ -121,9 +132,8 @@ class LinksController extends Controller
                 'destination' => $request->request->get('destination'),
                 'category'    => $request->request->get('category'),
                 'description' => $request->request->get('description'),
-                'publish'     => $request->request->get('publish', new \MongoDate(strtotime('+1 day'))),
+                'publish'     => new \MongoDate(strtotime($request->request->get('publish') . ' 03:00:00')),
             );
-
         }
 
         $m = new \MongoClient(); // connect
@@ -131,11 +141,7 @@ class LinksController extends Controller
         
         if( !$col->insert($data) ) {
             $create_link = $this->generateUrl('link_create');
-            $hal = new Hal($create_link);
-            $hal->addResource(
-                'link',
-                new Hal('/link', $data)
-            );
+            $hal = new Hal($create_link, array('error' => 'Could not save record'));
 
             $response = new Response();
             $response->headers->set('Content-Type', 'application/hal+json');
