@@ -19,6 +19,7 @@ class AppKernel extends Kernel
             new AppBundle\AppBundle(),
             new Distro\CoreBundle\DistroCoreBundle(),
             new Distro\LinksManagerBundle\DistroLinksManagerBundle(),
+            new Distro\SubscribersManagerBundle\DistroSubscribersManagerBundle(),
         );
 
         if (in_array($this->getEnvironment(), array('dev', 'test'))) {
