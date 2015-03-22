@@ -20,6 +20,35 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
 class LinksController extends Controller
 {
     /**
+     * @Route("/{id}", name="link_view")
+     * @Method("GET")
+     * @Template()
+     */
+    public function viewAction($id)
+    {
+        $m = new \MongoClient(); // connect
+        $col = $m->selectCollection("distro-2015","links");
+        $data = $col->findOne(array('_id' => new \MongoId($id)));
+
+        $self_link = $this->generateUrl('link_view',array('id' => $id) );
+
+        $hal = new Hal($self_link);
+        $hal->addResource(
+            'link',
+            new Hal($this->generateUrl('link_view', array( 'id' => $id)), $data) 
+        );
+
+        $response = new Response();
+        $response->headers->set('Content-Type', 'application/hal+json');
+        $response->setContent( $hal->asJson() );
+        return $response;
+
+        print '<pre>'; print_r($data); die;
+
+    }
+
+
+    /**
      * @Route("/", name="link_list" )
      * @Method("GET")
      * @Template()
@@ -28,8 +57,7 @@ class LinksController extends Controller
     {
         //Mongodb List all
 
-        //$hal = new Hal($this->generateUrl('link_list'), $rootData);
-        $hal = new Hal('/list');
+        $hal = new Hal($this->generateUrl('link_list'));
 
         //foreach($templates as $t) {
         //    $data = array(
@@ -54,6 +82,7 @@ class LinksController extends Controller
 
         return $response;
     }
+
 
     /**
      * @Route("/", name="link_create")
@@ -82,9 +111,6 @@ class LinksController extends Controller
             $errors[] = "Please provide a category";
         }
 
-        //$now = new \DateTime();
-        //$tomorrow = $now->modify('+1 day');
-
         if( count($errors) > 0 ) {
             $data = array(
                 'errors' => $errors
@@ -99,30 +125,26 @@ class LinksController extends Controller
             );
 
         }
+
         $m = new \MongoClient(); // connect
         $col = $m->selectCollection("distro-2015","links");
-        $col->insert($data);
-print_r('<pre>'); print_r($data);
-die;
+        
+        if( !$col->insert($data) ) {
+            $create_link = $this->generateUrl('link_create');
+            $hal = new Hal($create_link);
+            $hal->addResource(
+                'link',
+                new Hal('/link', $data)
+            );
 
+            $response = new Response();
+            $response->headers->set('Content-Type', 'application/hal+json');
+            $response->setContent( $hal->asJson() );
+        } else {
+            $response = $this->redirect($this->generateUrl('link_view', array('id' => (string) $data['_id'])));
+        }
 
-        $create_link = $this->generateUrl('template_create');
-        $hal = new Hal($create_link);
-        $data = array(
-            'id'          => $template->getId(),
-            'title'       => $template->getTitle(),
-            'description' => $template->getDescription(),
-            'sructure'    => $template->getStructure(),
-            'owner'       => $template->getOwner()
-        );
-        $resource_link = $this->generateUrl('template_view', array('id' => $template->getId()) );
-        $hal->addResource(
-            'template',
-            new Hal($resource_link, $data)
-        );
-        return array(
-            'result' => static::getResponse($hal)
-        );
+        return $response;
     } 
 
 }//LinksController
